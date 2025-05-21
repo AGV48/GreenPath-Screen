@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <header class="bg-green-600 text-white p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <img src="media/logo.png" width="50" height="50" alt="Logo de GREENPATH">
+                <img src="front/media/logo.png" width="50" height="50" alt="Logo de GREENPATH">
                 <div>
                     <h1 class="text-2xl font-bold">GREENPATH</h1>
                     <h2 class="text-xl">VISIONS</h2>

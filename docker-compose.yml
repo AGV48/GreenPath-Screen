@@ -4,7 +4,7 @@ services:
   web:
     build: .
     ports:
-      - "8080:10000"  # Mapea el puerto 10000 del contenedor al 8080 local
+      - "80:80"  # Mapea el puerto 10000 del contenedor al 8080 local
     volumes:
       - ./app:/var/www/html
     restart: unless-stopped

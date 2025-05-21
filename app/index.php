@@ -87,7 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <header class="bg-green-600 text-white p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-4">
-                <img src="/front/media/logo.png">
                 <div>
                     <h1 class="text-2xl font-bold">GREENPATH</h1>
                     <h2 class="text-xl">VISIONS</h2>

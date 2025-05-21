@@ -1,14 +1,19 @@
 # Usar la imagen oficial de PHP con Apache
 FROM php:8.2-apache
 
-# Habilitar el módulo rewrite de Apache para URLs amigables
-RUN a2enmod rewrite
+# Habilitar módulos necesarios
+RUN a2enmod rewrite headers
 
-# Copiar los archivos de la aplicación al contenedor
-COPY app/ /var/www/html/
+# Copiar los archivos al directorio correcto
+COPY ./app /var/www/html/
 
-# Establecer los permisos adecuados
+# Establecer permisos
 RUN chown -R www-data:www-data /var/www/html
 
-# Exponer el puerto 80
-EXPOSE 80
+# Configurar Apache para usar el puerto que Render espera (10000)
+ENV APACHE_RUN_PORT 10000
+EXPOSE 10000
+
+# Health check para Render
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:10000/ || exit 1

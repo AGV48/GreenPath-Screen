@@ -42,7 +42,8 @@ $selectedWaste = [
     "type" => "",
     "color" => "",
     "tips" => "",
-    "binImage" => "front/media/Caneca_Negra.png"
+    "binImage" => "front/media/Caneca_Negra.png",
+    "qrImage" => ""
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -51,13 +52,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (array_key_exists($normalizedInput, $wasteData)) {
         $selectedWaste = $wasteData[$normalizedInput];
+        // Generar URL para el QR usando Google Charts API (URL completa)
+        $qrData = "Residuo: ".$selectedWaste['name']."\n";
+        $qrData .= "Tipo: ".$selectedWaste['type']."\n";
+        $qrData .= "Caneca: ".$selectedWaste['color']."\n";
+        $qrData .= "Consejo: ".$selectedWaste['tips'];
+        
+        // Asegúrate de usar la URL completa con https://
+        $selectedWaste['qrImage'] = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=".urlencode($qrData);
     } elseif (!empty($wasteName)) {
         $selectedWaste = [
             "name" => ucfirst($wasteName),
             "type" => "Indeterminado",
             "color" => "Negra",
             "tips" => "Consulta las normas locales de reciclaje",
-            "binImage" => "front/media/Caneca_Negra.png"
+            "binImage" => "front/media/Caneca_Negra.png",
+            "qrImage" => ""
         ];
     }
 }
@@ -137,7 +147,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <h2 class="text-xl text-gray-700 mb-4">Residuo: <?php echo htmlspecialchars($selectedWaste['name']); ?></h2>
                         
                         <div class="flex flex-col items-center space-y-4">
-                            <img src="<?php echo $selectedWaste['binImage']; ?>" alt="Caneca" class="w-32 h-32 object-contain" />
+                            <div class="flex items-center justify-center gap-4">
+                                <img src="<?php echo $selectedWaste['binImage']; ?>" alt="Caneca" class="w-32 h-32 object-contain" />
+                                <?php if (!empty($selectedWaste['qrImage'])): ?>
+                                    <img src="<?php echo $selectedWaste['qrImage']; ?>" alt="Código QR" class="w-32 h-32 object-contain border border-gray-200" />
+                                <?php endif; ?>
+                            </div>
                             
                             <div class="w-full max-w-md bg-gray-100 rounded-lg p-4 space-y-2">
                                 <div class="flex justify-between">
@@ -153,6 +168,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <p><?php echo $selectedWaste['tips']; ?></p>
                                 </div>
                             </div>
+
+                            <?php if (!empty($selectedWaste['qrImage'])): ?>
+                                <a href="<?php echo $selectedWaste['qrImage']; ?>" download="qr_<?php echo str_replace(' ', '_', strtolower($selectedWaste['name'])); ?>.png" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                                    Descargar QR
+                                </a>
+                            <?php endif; ?>
                         </div>
                     <?php else: ?>
                         <p class="text-gray-500">Selecciona o escribe un residuo para ver su información</p>

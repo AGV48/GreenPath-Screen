@@ -119,6 +119,7 @@ function recognizeWaste($imageFile) {
     <header class="bg-green-600 text-white p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-4">
+                <img src="media/logo.png" width="50" height="50" alt="Logo GREENPATH VISIONS" class="rounded-full">
                 <div>
                     <h1 class="text-2xl font-bold">GREENPATH</h1>
                     <h2 class="text-xl">VISIONS</h2>
@@ -129,69 +130,105 @@ function recognizeWaste($imageFile) {
     </header>
 
     <main class="container mx-auto p-4">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-        <!-- Sección de cámara (mantén igual que antes)... -->
-        
-        <!-- Sección de resultados mejorada -->
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <div class="text-center mb-6">
-                <h1 class="text-3xl font-bold text-green-600 mb-2">Resultado</h1>
-                <?php if (!empty($selectedWaste['name'])): ?>
-                    <h2 class="text-xl text-gray-700 mb-4">Residuo: <?php echo htmlspecialchars($selectedWaste['name']); ?></h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+            <!-- Sección de cámara -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="text-center mb-6">
+                    <h1 class="text-3xl font-bold text-green-600 mb-2">Desechar Residuo</h1>
+                    <h2 class="text-xl text-gray-700">Captura una imagen del residuo para identificarlo</h2>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data" class="space-y-4">
+                    <!-- Contenedor de la cámara -->
+                    <div class="relative bg-gray-200 rounded-lg overflow-hidden" style="padding-bottom: 75%;">
+                        <video id="cameraPreview" autoplay playsinline class="absolute top-0 left-0 w-full h-full object-cover"></video>
+                        <canvas id="photoCanvas" class="absolute top-0 left-0 w-full h-full object-cover hidden"></canvas>
+                        <div id="noCameraMessage" class="absolute inset-0 flex items-center justify-center bg-gray-200 p-4 text-center hidden">
+                            <p>No se pudo acceder a la cámara. Por favor, sube una imagen manualmente.</p>
+                        </div>
+                    </div>
                     
-                    <div class="flex flex-col items-center space-y-6">
-                        <!-- Contenedor principal de resultado -->
-                        <div class="w-full bg-<?php echo strtolower($selectedWaste['color']); ?>-100 rounded-xl p-6 shadow-inner">
-                            <div class="flex flex-col md:flex-row items-center justify-center gap-6">
-                                <!-- Imagen de la caneca -->
-                                <div class="text-center">
-                                    <img src="<?php echo $selectedWaste['binImage']; ?>" 
-                                         alt="Caneca <?php echo $selectedWaste['color']; ?>" 
-                                         class="w-40 h-40 object-contain mx-auto">
-                                    <p class="mt-2 font-bold text-lg">Caneca <?php echo $selectedWaste['color']; ?></p>
+                    <!-- Botones de control de la cámara -->
+                    <div class="flex justify-center gap-4">
+                        <button type="button" id="takePhotoBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full transition duration-200 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Capturar
+                        </button>
+                        <button type="button" id="retakePhotoBtn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-full transition duration-200 flex items-center gap-2 hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Volver a tomar
+                        </button>
+                        <button type="submit" id="sendPhotoBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full transition duration-200 flex items-center gap-2 hidden">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            Enviar
+                        </button>
+                    </div>
+                    
+                    <!-- Input oculto para la foto capturada -->
+                    <input type="file" id="photoInput" name="waste_image" accept="image/*" capture="environment" class="hidden">
+                    
+                    <!-- Campo de texto alternativo (mantenido por si acaso) -->
+                    <div class="pt-4 border-t border-gray-200">
+                        <label for="waste_name_input" class="block text-center text-gray-700 mb-2">O escribe el nombre del residuo:</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="waste_name_input" name="waste_name_input" placeholder="Ej: Botella de plástico" class="flex-1 px-4 py-2 rounded-lg border border-gray-300">
+                            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                                Buscar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="text-center mb-6">
+                    <h1 class="text-3xl font-bold text-green-600 mb-2">Resultado</h1>
+                    <?php if (!empty($selectedWaste['name'])): ?>
+                        <h2 class="text-xl text-gray-700 mb-4">Residuo: <?php echo htmlspecialchars($selectedWaste['name']); ?></h2>
+                        
+                        <div class="flex flex-col items-center space-y-4">
+                            <div class="flex items-center justify-center gap-4">
+                                <img src="<?php echo $selectedWaste['binImage']; ?>" alt="Caneca" class="w-32 h-32 object-contain" />
+                                <?php if (!empty($selectedWaste['qrImage'])): ?>
+                                    <img src="<?php echo $selectedWaste['qrImage']; ?>" alt="Código QR" class="w-32 h-32 object-contain border border-gray-200" />
+                                <?php endif; ?>
+                            </div>
+                            
+                            <div class="w-full max-w-md bg-gray-100 rounded-lg p-4 space-y-2">
+                                <div class="flex justify-between">
+                                    <span class="font-semibold">Tipo:</span>
+                                    <span><?php echo $selectedWaste['type']; ?></span>
                                 </div>
-                                
-                                <!-- Información detallada -->
-                                <div class="bg-white rounded-lg p-4 shadow-md flex-1 max-w-md">
-                                    <div class="space-y-3">
-                                        <div>
-                                            <p class="font-semibold text-gray-700">Tipo de residuo:</p>
-                                            <p class="text-lg"><?php echo $selectedWaste['type']; ?></p>
-                                        </div>
-                                        <div>
-                                            <p class="font-semibold text-gray-700">Recomendación:</p>
-                                            <p class="text-green-600"><?php echo $selectedWaste['tips']; ?></p>
-                                        </div>
-                                    </div>
+                                <div class="flex justify-between">
+                                    <span class="font-semibold">Color de caneca:</span>
+                                    <span><?php echo $selectedWaste['color']; ?></span>
+                                </div>
+                                <div class="pt-2 border-t border-gray-200">
+                                    <p class="font-semibold">Consejos:</p>
+                                    <p><?php echo $selectedWaste['tips']; ?></p>
                                 </div>
                             </div>
+
+                            <?php if (!empty($selectedWaste['qrImage'])): ?>
+                                <a href="<?php echo $selectedWaste['qrImage']; ?>" download="qr_<?php echo str_replace(' ', '_', strtolower($selectedWaste['name'])); ?>.png" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                                    Descargar QR
+                                </a>
+                            <?php endif; ?>
                         </div>
-                        
-                        <!-- Código QR -->
-                        <?php if (!empty($selectedWaste['qrImage'])): ?>
-                        <div class="text-center mt-4">
-                            <p class="text-sm text-gray-500 mb-2">Escanea este código para más información</p>
-                            <img src="<?php echo $selectedWaste['qrImage']; ?>" 
-                                 alt="Código QR" 
-                                 class="w-32 h-32 object-contain border border-gray-200 mx-auto">
-                            <a href="<?php echo $selectedWaste['qrImage']; ?>" 
-                               download="qr_<?php echo str_replace(' ', '_', strtolower($selectedWaste['name'])); ?>.png" 
-                               class="inline-block mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
-                                Descargar QR
-                            </a>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                <?php else: ?>
-                    <div class="py-12">
-                        <img src="front/media/scan_instruction.png" alt="Instrucciones" class="w-48 mx-auto mb-4">
-                        <p class="text-gray-500">Captura una imagen del residuo para identificar el contenedor correcto</p>
-                    </div>
-                <?php endif; ?>
+                    <?php else: ?>
+                        <p class="text-gray-500">Captura o sube una imagen de un residuo para identificarlo</p>
+                    <?php endif; ?>
+                </div>
             </div>
         </div>
-    </div>
-</main>
+    </main>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {

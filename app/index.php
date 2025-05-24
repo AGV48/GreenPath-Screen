@@ -114,6 +114,8 @@ function recognizeWaste($imageFile) {
     <link rel="stylesheet" href="front/css/styles.css">
     <link rel="shortcut icon" href="front/media/logo.png" type="image/x-icon">
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0"></script>
 </head>
 <body class="min-h-screen bg-gray-50">
     <header class="bg-green-600 text-white p-4 shadow-md">
@@ -135,17 +137,16 @@ function recognizeWaste($imageFile) {
             <div class="bg-white rounded-xl shadow-sm p-6">
                 <div class="text-center mb-6">
                     <h1 class="text-3xl font-bold text-green-600 mb-2">Desechar Residuo</h1>
-                    <h2 class="text-xl text-gray-700">Captura una imagen del residuo para identificarlo</h2>
+                    <h2 class="text-xl text-gray-700">Escanea el residuo con tu cámara o selecciónalo manualmente</h2>
                 </div>
                 
                 <form method="POST" enctype="multipart/form-data" class="space-y-4">
                     <!-- Contenedor de la cámara -->
-                    <div class="relative bg-gray-200 rounded-lg overflow-hidden" style="padding-bottom: 75%;">
-                        <video id="cameraPreview" autoplay playsinline class="absolute top-0 left-0 w-full h-full object-cover"></video>
-                        <canvas id="photoCanvas" class="absolute top-0 left-0 w-full h-full object-cover hidden"></canvas>
-                        <div id="noCameraMessage" class="absolute inset-0 flex items-center justify-center bg-gray-200 p-4 text-center hidden">
-                            <p>No se pudo acceder a la cámara. Por favor, sube una imagen manualmente.</p>
-                        </div>
+                    <div class="mb-4">
+                        <video id="camera" autoplay playsinline class="w-full rounded-lg border border-gray-300"></video>
+                        <button id="captureBtn" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-200">
+                            Capturar y Clasificar
+                        </button>
                     </div>
                     
                     <!-- Botones de control de la cámara -->
@@ -230,112 +231,76 @@ function recognizeWaste($imageFile) {
         </div>
     </main>
 
+    <!-- Script para el reconocimiento de imágenes -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const video = document.getElementById('cameraPreview');
-            const canvas = document.getElementById('photoCanvas');
-            const takePhotoBtn = document.getElementById('takePhotoBtn');
-            const retakePhotoBtn = document.getElementById('retakePhotoBtn');
-            const sendPhotoBtn = document.getElementById('sendPhotoBtn');
-            const noCameraMessage = document.getElementById('noCameraMessage');
-            const photoInput = document.getElementById('photoInput');
-            const fileUpload = document.getElementById('fileUpload');
-            const form = document.querySelector('form');
-            
-            let stream = null;
-            let photoTaken = false;
+        // Mapeo de clases de residuos a tus categorías (personalízalo según tu modelo)
+        const wasteCategories = {
+            "plastic": "Botella de Plástico",
+            "bottle": "Botella de Plástico",
+            "fruit": "Cáscara de Fruta",
+            "newspaper": "Periódico",
+            "can": "Latas"
+        };
 
-            // Iniciar la cámara
-            function startCamera() {
-                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                    navigator.mediaDevices.getUserMedia({ 
-                        video: { 
-                            facingMode: 'environment', // Usar cámara trasera
-                            width: { ideal: 1280 },
-                            height: { ideal: 720 }
-                        } 
-                    })
-                    .then(function(mediaStream) {
-                        stream = mediaStream;
-                        video.srcObject = mediaStream;
-                        video.style.display = 'block';
-                        noCameraMessage.style.display = 'none';
-                    })
-                    .catch(function(error) {
-                        console.error("Error al acceder a la cámara:", error);
-                        video.style.display = 'none';
-                        noCameraMessage.style.display = 'flex';
-                    });
-                } else {
-                    console.error("getUserMedia no soportado");
-                    video.style.display = 'none';
-                    noCameraMessage.style.display = 'flex';
+        // 1. Acceder a la cámara
+        const video = document.getElementById('camera');
+        const captureBtn = document.getElementById('captureBtn');
+        let model;
+
+        // Cargar el modelo al iniciar
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                
+                // Cargar modelo MobileNet
+                model = await mobilenet.load();
+                console.log("Modelo cargado!");
+            } catch (err) {
+                console.error("Error al acceder a la cámara:", err);
+                alert("No se pudo acceder a la cámara. Asegúrate de permitir los permisos.");
+            }
+        }
+
+        // 2. Clasificar la imagen capturada
+        captureBtn.addEventListener('click', async () => {
+            if (!model) {
+                alert("El modelo aún no está listo. Espera unos segundos.");
+                return;
+            }
+
+            // Crear un canvas temporal para capturar el frame
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Clasificar la imagen
+            const predictions = await model.classify(canvas);
+            const topPrediction = predictions[0].className.toLowerCase();
+
+            // Buscar coincidencia en wasteCategories
+            let matchedWaste = null;
+            for (const [key, value] of Object.entries(wasteCategories)) {
+                if (topPrediction.includes(key)) {
+                    matchedWaste = value;
+                    break;
                 }
             }
 
-            // Tomar foto
-            takePhotoBtn.addEventListener('click', function() {
-                if (!photoTaken) {
-                    const context = canvas.getContext('2d');
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    
-                    // Detener la cámara
-                    if (stream) {
-                        stream.getTracks().forEach(track => track.stop());
-                    }
-                    
-                    // Mostrar la foto tomada
-                    video.style.display = 'none';
-                    canvas.style.display = 'block';
-                    photoTaken = true;
-                    
-                    // Cambiar botones
-                    takePhotoBtn.classList.add('hidden');
-                    retakePhotoBtn.classList.remove('hidden');
-                    sendPhotoBtn.classList.remove('hidden');
-                }
-            });
-
-            // Volver a tomar foto
-            retakePhotoBtn.addEventListener('click', function() {
-                canvas.style.display = 'none';
-                photoTaken = false;
-                
-                // Cambiar botones
-                takePhotoBtn.classList.remove('hidden');
-                retakePhotoBtn.classList.add('hidden');
-                sendPhotoBtn.classList.add('hidden');
-                
-                // Reiniciar cámara
-                startCamera();
-            });
-
-            // Enviar foto
-            sendPhotoBtn.addEventListener('click', function() {
-                // Convertir canvas a blob y enviarlo
-                canvas.toBlob(function(blob) {
-                    const file = new File([blob], 'waste_photo.jpg', { type: 'image/jpeg' });
-                    const dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(file);
-                    photoInput.files = dataTransfer.files;
-                    
-                    // Enviar el formulario
-                    form.submit();
-                }, 'image/jpeg', 0.9);
-            });
-
-            // Manejar cambio en el input de subir archivo
-            fileUpload.addEventListener('change', function() {
-                if (this.files && this.files[0]) {
-                    form.submit();
-                }
-            });
-
-            // Iniciar cámara al cargar la página
-            startCamera();
+            // Enviar el resultado al formulario
+            if (matchedWaste) {
+                document.querySelector('input[name="waste_name_input"]').value = matchedWaste;
+                // Opcional: enviar automáticamente el formulario
+                document.querySelector('button[name="submit_text"]').click();
+            } else {
+                alert("No se pudo identificar el residuo. Intenta manualmente.");
+            }
         });
+
+        // Iniciar al cargar la página
+        window.addEventListener('DOMContentLoaded', initCamera);
     </script>
 </body>
 </html>

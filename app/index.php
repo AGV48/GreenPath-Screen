@@ -52,12 +52,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (array_key_exists($normalizedInput, $wasteData)) {
         $selectedWaste = $wasteData[$normalizedInput];
-        $qrData = "Residuo: ".$selectedWaste['name']."\n";
-        $qrData .= "Tipo: ".$selectedWaste['type']."\n";
-        $qrData .= "Caneca: ".$selectedWaste['color']."\n";
-        $qrData .= "Consejo: ".$selectedWaste['tips'];
-        
-        $selectedWaste['qrImage'] = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=".urlencode($qrData);
+        $qrData = json_encode([
+    'system' => 'GREENPATH',
+    'version' => '1.0',
+    'type' => 'waste_disposal',
+    'waste_id' => md5($normalizedInput . time()), // ID único
+    'waste_name' => $selectedWaste['name'],
+    'waste_type' => $selectedWaste['type'],
+    'bin_color' => $selectedWaste['color'],
+    'timestamp' => time()
+]);
+
+    $selectedWaste['qrImage'] = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=".urlencode($qrData);
     } elseif (!empty($wasteName)) {
         $selectedWaste = [
             "name" => ucfirst($wasteName),
